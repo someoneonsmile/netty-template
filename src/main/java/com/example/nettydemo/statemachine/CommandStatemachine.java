@@ -110,10 +110,10 @@ public class CommandStatemachine {
 
         public abstract String exec(CommandStatemachine statemachine, String args);
 
-        private static Map<String, Command> map = EnumUtils.getEnumMap(Command.class, Command::getName);
+        private static Map<String, Command> nameMap = EnumUtils.getEnumMap(Command.class, Command::getName);
 
         public static Command getByName(String name) {
-            return map.get(name);
+            return nameMap.get(name);
         }
     }
 }
