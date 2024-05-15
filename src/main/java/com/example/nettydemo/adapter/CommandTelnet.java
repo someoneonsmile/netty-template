@@ -1,9 +1,7 @@
 package com.example.nettydemo.adapter;
 
-import com.example.nettydemo.constants.CommonConst;
 import com.example.nettydemo.constants.EnvConst;
 import com.example.nettydemo.statemachine.CommandStatemachine;
-import com.example.nettydemo.util.SpringUtil;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.*;
@@ -92,7 +90,8 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
                         });
                     }
                 });
-            bootstrapChannelFuture = serverBootstrap.bind(envConst.getAdapterCommandPort()).sync();
+        // 绑定监听端口, 等待绑定完成
+        bootstrapChannelFuture = serverBootstrap.bind(envConst.getAdapterCommandPort()).sync();
     }
 
     @Override
