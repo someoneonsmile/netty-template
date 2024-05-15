@@ -21,16 +21,12 @@ public class CommandStatemachine {
         if (isTerminated()) {
             return null;
         }
-        try {
-            Command msgCmd = Command.getByName(msg);
-            if (msgCmd != null) {
-                command = msgCmd;
-                return Objects.toString(command.intro(this), "") + CommonConst.BR + prompt();
-            }
-            return Objects.toString(command.exec(this, msg), "") + CommonConst.BR + prompt();
-        } catch (Exception e) {
-            return "Error: " + e.getMessage() + CommonConst.BR + prompt();
+        Command msgCmd = Command.getByName(msg);
+        if (msgCmd != null) {
+            command = msgCmd;
+            return Objects.toString(command.intro(this), "") + CommonConst.BR + prompt();
         }
+        return Objects.toString(command.exec(this, msg), "") + CommonConst.BR + prompt();
     }
 
     /**

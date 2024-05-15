@@ -1,5 +1,6 @@
 package com.example.nettydemo.adapter;
 
+import com.example.nettydemo.constants.CommonConst;
 import com.example.nettydemo.constants.EnvConst;
 import com.example.nettydemo.statemachine.CommandStatemachine;
 import io.netty.bootstrap.ServerBootstrap;
@@ -86,6 +87,12 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
                                 if (commandStatemachine.isTerminated()) {
                                     ctx.close();
                                 }
+                            }
+
+                            @Override
+                            public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                                CommandStatemachine statemachine = channelStatemachineMap.get(ctx.channel());
+                                ctx.writeAndFlush("Error: " + cause + CommonConst.BR + statemachine.prompt());
                             }
                         });
                     }
