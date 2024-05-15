@@ -34,8 +34,7 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
 
     private NioEventLoopGroup bossGroup;
     private NioEventLoopGroup workerGroup;
-    private ServerBootstrap serverBootstrap;
-    private ChannelFuture bootstrapChannelFuture;
+    private Channel bootstrapChannel;
 
     private ConcurrentHashMap<Channel, CommandStatemachine> channelStatemachineMap = new ConcurrentHashMap<>();
 
@@ -43,7 +42,7 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
     public void afterPropertiesSet() throws Exception {
         bossGroup = new NioEventLoopGroup(1);
         workerGroup = new NioEventLoopGroup();
-        serverBootstrap = new ServerBootstrap();
+        ServerBootstrap serverBootstrap = new ServerBootstrap();
         serverBootstrap.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
                 .option(ChannelOption.SO_REUSEADDR, Boolean.TRUE)
@@ -98,7 +97,8 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
                     }
                 });
         // 绑定监听端口, 等待绑定完成
-        bootstrapChannelFuture = serverBootstrap.bind(envConst.getAdapterCommandPort()).sync();
+        ChannelFuture bootstrapChannelFuture = serverBootstrap.bind(envConst.getAdapterCommandPort()).sync();
+        bootstrapChannel = bootstrapChannelFuture.channel();
     }
 
     @Override
@@ -106,8 +106,14 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
         System.out.println("destroy");
         channelStatemachineMap.clear();
         // 优雅关闭事件循环组
-        bossGroup.shutdownGracefully();
-        workerGroup.shutdownGracefully();
-        bootstrapChannelFuture.channel().closeFuture().sync();
+        if (bossGroup != null) {
+            bossGroup.shutdownGracefully();
+        }
+        if (workerGroup != null) {
+            workerGroup.shutdownGracefully();
+        }
+        if (bootstrapChannel != null) {
+            bootstrapChannel.closeFuture().sync();
+        }
     }
 }
