@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.example</groupId>
-    <artifactId>netty-demo</artifactId>
+    <artifactId>netty-template</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>netty-demo</name>
-    <description>netty-demo</description>
+    <name>netty-template</name>
+    <description>netty-template</description>
     <properties>
         <java.version>21</java.version>
     </properties>
