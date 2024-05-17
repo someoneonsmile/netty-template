@@ -14,7 +14,9 @@ import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.timeout.IdleStateHandler;
+import io.netty.util.AttributeKey;
 import jakarta.annotation.Resource;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.DisposableBean;
 import org.springframework.beans.factory.InitializingBean;
@@ -22,10 +24,10 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 
+@Slf4j
 @Component
 public class CommandTelnet implements InitializingBean, DisposableBean {
 
@@ -36,7 +38,7 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
     private NioEventLoopGroup workerGroup;
     private Channel bootstrapChannel;
 
-    private ConcurrentHashMap<Channel, CommandStatemachine> channelStatemachineMap = new ConcurrentHashMap<>();
+    public static final AttributeKey<CommandStatemachine> stKey = AttributeKey.valueOf("statemachine");
 
     @Override
     public void afterPropertiesSet() throws Exception {
@@ -64,21 +66,19 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
                             public void channelActive(ChannelHandlerContext ctx) throws Exception {
                                 Channel channel = ctx.channel();
                                 CommandStatemachine statemachine = new CommandStatemachine();
-                                channelStatemachineMap.put(channel, statemachine);
+                                channel.attr(stKey).set(statemachine);
                                 ctx.writeAndFlush(statemachine.execute(CommandStatemachine.Command.HELP.getName()));
                                 super.channelActive(ctx);
                             }
 
                             @Override
                             public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                                Channel channel = ctx.channel();
-                                channelStatemachineMap.remove(channel);
                                 super.channelInactive(ctx);
                             }
 
                             @Override
                             protected void channelRead0(ChannelHandlerContext ctx, String msg) throws Exception {
-                                CommandStatemachine commandStatemachine = channelStatemachineMap.get(ctx.channel());
+                                CommandStatemachine commandStatemachine = ctx.channel().attr(stKey).get();
                                 String resp = commandStatemachine.execute(msg);
                                 if (StringUtils.isNotBlank(resp)) {
                                     ctx.writeAndFlush(resp);
@@ -90,7 +90,7 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
 
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                                CommandStatemachine statemachine = channelStatemachineMap.get(ctx.channel());
+                                CommandStatemachine statemachine = ctx.channel().attr(stKey).get();
                                 ctx.writeAndFlush("Error: " + cause + CommonConst.BR + statemachine.prompt());
                             }
                         });
@@ -99,12 +99,11 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
         // 绑定监听端口, 等待绑定完成
         ChannelFuture bootstrapChannelFuture = serverBootstrap.bind(envConst.getAdapterCommandPort()).sync();
         bootstrapChannel = bootstrapChannelFuture.channel();
+        log.info("CommandTelnet listening on port {}", envConst.getAdapterCommandPort());
     }
 
     @Override
     public void destroy() throws Exception {
-        System.out.println("destroy");
-        channelStatemachineMap.clear();
         // 优雅关闭事件循环组
         if (bossGroup != null) {
             bossGroup.shutdownGracefully();
