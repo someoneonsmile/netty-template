@@ -1,5 +1,7 @@
 package com.example.nettydemo.adapter;
 
+import com.example.nettydemo.adapter.handler.LogHandler;
+import com.example.nettydemo.adapter.handler.RealInputHandler;
 import com.example.nettydemo.constants.CommonConst;
 import com.example.nettydemo.constants.EnvConst;
 import com.example.nettydemo.statemachine.CommandStatemachine;
@@ -12,7 +14,7 @@ import io.netty.channel.socket.nio.NioServerSocketChannel;
 import io.netty.handler.codec.LineBasedFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
-import io.netty.handler.logging.LoggingHandler;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.timeout.IdleStateHandler;
 import io.netty.util.AttributeKey;
 import jakarta.annotation.Resource;
@@ -59,16 +61,17 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
                         pipeline.addLast("line-base-decoder", new LineBasedFrameDecoder(1024));
                         pipeline.addLast("decoder", new StringDecoder(StandardCharsets.UTF_8));
                         pipeline.addLast("encoder", new StringEncoder(Charset.forName("GBK")));
+                        pipeline.addLast("real-input", new RealInputHandler());
                         pipeline.addLast("idle", new IdleStateHandler(0, 0, 6000, TimeUnit.MILLISECONDS));
-                        pipeline.addLast("log", new LoggingHandler());
+                        pipeline.addLast("log", new LogHandler(LogLevel.DEBUG));
                         pipeline.addLast("handler", new SimpleChannelInboundHandler<String>() {
                             @Override
                             public void channelActive(ChannelHandlerContext ctx) throws Exception {
+                                super.channelActive(ctx);
                                 Channel channel = ctx.channel();
                                 CommandStatemachine statemachine = new CommandStatemachine();
                                 channel.attr(stKey).set(statemachine);
                                 ctx.writeAndFlush(statemachine.execute(CommandStatemachine.Command.HELP.getName()));
-                                super.channelActive(ctx);
                             }
 
                             @Override
@@ -90,6 +93,7 @@ public class CommandTelnet implements InitializingBean, DisposableBean {
 
                             @Override
                             public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                                super.exceptionCaught(ctx, cause);
                                 CommandStatemachine statemachine = ctx.channel().attr(stKey).get();
                                 ctx.writeAndFlush("Error: " + cause + CommonConst.BR + statemachine.prompt());
                             }
