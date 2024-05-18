@@ -76,7 +76,7 @@ public class CommandStatemachine {
 
             @Override
             public String exec(CommandStatemachine statemachine, String args) {
-                return "";
+                return args;
             }
         },
         QUIT("quit", "退出") {
